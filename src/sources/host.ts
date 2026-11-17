@@ -13,6 +13,10 @@ export const HEALTH_TEXT = {
   sourceOff: 'Off',
   feishuCliUnset: 'The Source is on, and its bot lark-cli is not set',
   feishuBotMissing: 'Waiting for the Feishu bot',
+  giteeRepositoryUnset: 'The Gitee Source names no repository',
+  giteeTokenUnset: 'The Gitee Source is on, and its access token file is not set',
+  giteeTokenUnreadable: 'The Gitee token file {file} cannot be read',
+  giteeAccessDenied: 'Gitee denied the API request',
   pollFailures: '{count} consecutive failed polls; last: {error}',
 } as const
 export type HealthCode = keyof typeof HEALTH_TEXT
