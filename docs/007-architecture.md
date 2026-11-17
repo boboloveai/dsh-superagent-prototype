@@ -249,7 +249,7 @@ Each model request binds the Session to the current prompt revision. The revisio
 | `src/app/tools/main.ts`, `src/app/tools/executor.ts` | Tool arguments of the main Session and the Executor Sessions into calls of the core classes, and their results into cards |
 | `src/app/http.ts`, `src/app/views/`, `src/app/api.ts` | HTTP requests into calls, and Store reads into the panel's views; `api.ts` types every route for the panel |
 | `src/app/resources.ts`, `src/app/links.ts`, `src/app/cards.ts` | Resource names into reads, source messages into links, records into compact cards for models |
-| `src/sources/github*.ts`, `src/sources/feishu*.ts`, `src/sources/poll.ts` | GitHub and Feishu payloads into Triggers and Thread facts, and messages into CLI calls |
+| `src/sources/github*.ts`, `src/sources/feishu*.ts`, `src/sources/gitee*.ts`, `src/sources/poll.ts` | GitHub, Feishu and Gitee payloads into Triggers and Thread facts, and messages into CLI calls |
 | `src/deployment.ts`, `src/setup.ts`, `src/infra/` | Setup probes and problems, CLI transport, the agent's process environment |
 
 ## Dependency rules
@@ -274,7 +274,7 @@ Each model request binds the Session to the current prompt revision. The revisio
 - **Fixed refusals.** A refusal a person or an agent can cause is a `UserError(code, values)` from `USER_ERRORS` in `src/core/errors.ts`. The management API answers a `missing` code with 404 and the others with 400, and the panel words each code in its language. Setup problems are `SetupError` codes (`src/setup.ts`) and fixed health texts `HealthCode`s (`src/sources/host.ts`), worded the same way.
 ### Source-specific dependencies
 
-Some generic modules still refer directly to GitHub or Feishu:
+Some generic modules still refer directly to GitHub, Feishu or Gitee:
 
 - Outbox applies the Feishu chat word limit.
 - `src/app/links.ts` resolves Feishu message links and `repliedTo`. It and Runtime read settings with `feishuSettings`.
@@ -283,7 +283,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 - Executor tools bind reported pull requests with `readPull` and `claimPull`, using the GitHub context exposed by Runtime.
 - MasterAssessor reads repository files with `readRepositoryPath`.
 - Sessions and Prompts register built-in skills only for GitHub and Feishu. Migration converts their schema-10 records.
-- Setup probes only GitHub and Feishu account fields (`SETUP_FIELDS`). Only those Sources receive account setup problems through `SourceContext.problem`.
+- Setup probes only GitHub and Feishu account fields (`SETUP_FIELDS`). Only those Sources receive account setup problems through `SourceContext.problem`; the Gitee Source checks its token on each poll and reports it as Source health.
 
 
 ## Modules
@@ -361,7 +361,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/kind.ts` | The `SourceKind` protocol |
 | `src/sources/registry.ts` | `SourceRegistry` |
 | `src/sources/host.ts` | `SourceHost`, `SourceContext`, `Health`, `health` and the fixed health texts |
-| `src/sources/poll.ts` | What GitHub and Feishu polling share: `POLL_HORIZON_MS`, `polled`, `cursorAt`, and `pollThreads`, which keeps a failure on its Thread as `pollError` |
+| `src/sources/poll.ts` | What GitHub, Feishu and Gitee polling share: `POLL_HORIZON_MS`, `polled`, `cursorAt`, and `pollThreads`, which keeps a failure on its Thread as `pollError` |
 | `src/sources/github.ts` | The GitHub kind and plugin entry, exported as `./github-watch`: a poll round of notifications, the pull requests of open Tickets with their CI, and subscribed Threads |
 | `src/sources/github-trigger.ts` | GitHub comments, reviews, Issue bodies and CI changes as Triggers, and GitHub addresses |
 | `src/sources/github-pull.ts` | The pull request rules: which pull requests a Ticket follows (`claimPull`, `observePull`), the closes it reports to the Engine, and `pullEndNotices`, the chat notice of a Ticket that ended merged or closed |
@@ -372,6 +372,11 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/feishu-loops.ts` | The Feishu loops: the event consumer, history recovery, chat names and polling of subscribed topics |
 | `src/sources/feishu-channel.ts` | The Feishu Channel: topic replies, `sent` or `gone` |
 | `src/sources/feishu-read.ts` | The `feishu/` reads of a Trigger's message, its root, parent and topic, and `feishuThreadContext`, which gives them to assessments with their images |
+| `src/sources/gitee.ts` | The Gitee kind and plugin entry, exported as `./gitee-watch`: a poll round of issues, their comments, and subscribed Tickets |
+| `src/sources/gitee-api.ts` | The Gitee REST v5 client: token loading, repository-scoped reads and writes, pagination, and `GiteeError` |
+| `src/sources/gitee-trigger.ts` | Gitee issues and comments as Triggers, their ids, addresses and mention rule |
+| `src/sources/gitee-channel.ts` | The Gitee Channel: idempotent issue comments, `sent` or `gone` |
+| `src/sources/gitee-read.ts` | `giteeThreadContext`: an Issue's description and comments by page |
 | `src/sources/admission-context.ts` | The bounded window an assessment starts from: the first pages of a Trigger's Thread, read through its kind, and the messages around the Trigger |
 | `src/sources/feishu-image.ts` | Reads a Feishu message's image as an attachment for the assessing Session |
 | `src/client/index.tsx` | The client plugin entry: the sidebar entry, the main panel and the page in DeepSeek Harness's Plugin Manager |
@@ -397,7 +402,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/client/locales.ts` | All copy in both languages, and the glossary of [001 Domain model](001-domain.md) |
 | `src/client/client.css`, `css.d.ts` | The panel's stylesheet, loaded as text |
 
-`src/sources/github.ts` and `src/sources/feishu.ts` are also the entries of the two Source plugins, built by `tsdown.config.ts` and exported in `package.json` as `./github-watch` and `./feishu-watch`. The bundle's `cordis.patch.yml` inserts the three plugins, with Feishu disabled.
+`src/sources/github.ts`, `src/sources/feishu.ts` and `src/sources/gitee.ts` are also the entries of the three Source plugins, built by `tsdown.config.ts` and exported in `package.json` as `./github-watch`, `./feishu-watch` and `./gitee-watch`. The bundle's `cordis.patch.yml` inserts the four plugins, with Feishu and Gitee disabled.
 
 ## Tests
 
@@ -408,6 +413,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/policy.spec.ts` | Source scope, the gate, the admission table, Mandate revalidation, the Policy version, settings migrations and assessment outcomes |
 | `tests/registry.spec.ts` | `SourceRegistry`: instances, validation, Policy parts, Channels and Thread context |
 | `tests/sources.spec.ts` | The Feishu and GitHub Sources on a `SourceContext`: translation, polls and read positions, the pull request rules, health |
+| `tests/gitee.spec.ts` | The Gitee Source: trigger mapping, token and HTTP client, polling, replies and Thread context |
 | `tests/commands.spec.ts` | CLI calls as the deployment's accounts, the Channels' answers, and repository-scoped GitHub calls |
 | `tests/feishu-read.spec.ts`, `tests/github-read.spec.ts` | Feishu and GitHub reads |
 | `tests/admission-context.spec.ts`, `tests/feishu-image.spec.ts` | The Thread window of assessments, and Feishu image reads |
@@ -568,7 +574,7 @@ Ticket Threads are marked `context` for context-only follows and `bound` for Sou
 
 Source resources include message neighborhoods, `github/pulls/<n>/thread/<comment id>` and `github/commits/<sha>/checks`.
 
-An original's messages read in one compact shape, `{id, from, at, text, reply_to?, path?, line?, url?}`, not as GitHub or Feishu records them.
+An original's messages read in one compact shape, `{id, from, at, text, reply_to?, path?, line?, url?}`, not as GitHub, Feishu or Gitee records them.
 
 An Executor Session reads only its own Ticket, its Threads, the Triggers that reached it or that its request held, the prompt versions it worked under and the originals, and its pages leave out the ids of what it cannot read, Decisions and other Tickets.
 
@@ -609,7 +615,7 @@ A settings save that changes a Source field setup reads, such as an account's CL
 
 ## Reviewing a change against real data
 
-Point `DSH_HOME` at a temporary directory and create a new profile there. Copy the database from a backup, disable every Source, pause processing and remove the main Session id. Give the GitHub and Feishu CLIs read-only stand-ins.
+Point `DSH_HOME` at a temporary directory and create a new profile there. Copy the database from a backup, disable every Source, pause processing and remove the main Session id. Give the GitHub and Feishu CLIs read-only stand-ins, and the Gitee Source a read-only token.
 
 ## Open questions
 

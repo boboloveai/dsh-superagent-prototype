@@ -745,6 +745,10 @@ const TEXT = {
   'healthCode.sourceOff': ['已关闭', HEALTH_TEXT.sourceOff],
   'healthCode.feishuCliUnset': ['来源已打开，还没有设置机器人的 lark-cli', HEALTH_TEXT.feishuCliUnset],
   'healthCode.feishuBotMissing': ['等待飞书机器人', HEALTH_TEXT.feishuBotMissing],
+  'healthCode.giteeRepositoryUnset': ['Gitee 来源还没有填写仓库', HEALTH_TEXT.giteeRepositoryUnset],
+  'healthCode.giteeTokenUnset': ['Gitee 来源已打开，还没有设置访问令牌文件', HEALTH_TEXT.giteeTokenUnset],
+  'healthCode.giteeTokenUnreadable': ['读不到 Gitee 访问令牌文件 {file}', HEALTH_TEXT.giteeTokenUnreadable],
+  'healthCode.giteeAccessDenied': ['Gitee 拒绝了 API 请求', HEALTH_TEXT.giteeAccessDenied],
   'healthCode.pollFailures': ['连续 {count} 次轮询失败，最近一次：{error}', HEALTH_TEXT.pollFailures],
 } as const satisfies Record<string, readonly [string, string]>
 export type DshSuperagentKey = keyof typeof TEXT
